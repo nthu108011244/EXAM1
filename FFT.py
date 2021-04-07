@@ -14,7 +14,7 @@ T = n/Fs
 frq = k/T # a vector of frequencies; two sides frequency range
 frq = frq[range(int(n/2))] # one side frequency range
 
-serdev = '/dev/ttyACM0'
+serdev = '/dev/ttyACM2'
 s = serial.Serial(serdev)
 for x in range(0, int(Fs)):
     line=s.readline() # Read an echo string from B_L4S5I_IOT01A terminated with '\n'
