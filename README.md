@@ -31,7 +31,7 @@
   void wave_sample();
   
 # Analysis
-  sampling rate = 1000/s.
-  I do not change ant thing else.
+  sampling rate = 1000/s.\
+  I did not change anything else.
   
   
