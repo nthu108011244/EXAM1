@@ -124,11 +124,11 @@ void wave_sample()
         for (int i = 0; i < sampleAmount; i++)
         {
             sample[i] = ain;
-            wait_us(500);
+            ThisThread::sleep_for(1ms);
         }
         for (int i = 0; i < sampleAmount; i++)
         {
-           printf("%f\r\n", sample[i]);
+            printf("%f\r\n", sample[i]);
         }
         ThisThread::sleep_for(5000ms);
     }
