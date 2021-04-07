@@ -1,6 +1,7 @@
 #include <mbed.h>
 #include "uLCD_4DGL.h"
 #include <iostream>
+#define sampleAmount 1000
 
 uLCD_4DGL   uLCD(D1, D0, D2); 
 InterruptIn button_up(D10);
@@ -10,18 +11,26 @@ AnalogOut   aout(D7);
 AnalogIn    ain(A0);
 
 Thread waveThread;
+Thread sampleThread;
 EventQueue waveQueue;
+EventQueue sampleQueue;
 
-float  slew = 1;
+int    slew = 1;
 int    slew_mode = 3;
-float  slew_table[4] = {0.125, 0.25, 0.5, 1};
+int    slew_table[4] = {8, 4, 2, 1};
+int    slew_time = 0;
 float  delta = 0;
 bool   if_change = 1;
 bool   if_generate = 0;
+float  sample[1000];
 
 void monitor_display_menu();
 void monitor_display_wave();
+void ISR1 ();
+void ISR2 ();
+void ISR3 ();
 void wave_generate();
+void wave_sample();
 
 void monitor_display_menu()
 {
@@ -42,7 +51,7 @@ void monitor_display_menu()
     uLCD.color(WHITE);
     uLCD.textbackground_color(BLACK);
     uLCD.locate(0, 2);
-    uLCD.printf("%4.4f", slew_table[slew_mode]);
+    uLCD.printf("%.3f", 1.0 / slew_table[slew_mode]);
 
 }
 
@@ -57,27 +66,31 @@ void monitor_display_wave()
     uLCD.color(RED);
     uLCD.textbackground_color(BLACK);
     uLCD.locate(0, 2);
-    uLCD.printf("%4.4f", slew_table[slew_mode]);
+    uLCD.printf("%.3f", 1.0 / slew_table[slew_mode]);
 }
 
 void ISR1 ()
 {
-    if (slew_mode < 3) slew_mode++;
+    if (slew_mode == 3) return;
+    slew_mode++;
     if_change = 1;
 }
 
 void ISR2 ()
 {
-    if (slew_mode > 0) slew_mode--;
+    if (slew_mode == 0) return;
+    slew_mode--;
     if_change = 1;
 }
 
 void ISR3 ()
 {
     slew = slew_table[slew_mode];
-    delta = 0.9f / (80.0f * slew);
+    delta = 0.9f / (80 / slew);
+    slew_time = 80 / slew;
     if_generate = 1;
     waveQueue.call(&wave_generate);
+    sampleQueue.call(&wave_sample);
 }
 
 void wave_generate()
@@ -85,27 +98,46 @@ void wave_generate()
     while (1)
     {
         aout = 0;
-        for (float i = 0.0f; i < 0.9f * slew; i += delta)
+        int i = 0;
+        for (i = 1; i <= slew_time; i++)
         {
-            aout = i;
-            ThisThread::sleep_for(1ms);
+            aout = (i * delta);
+            wait_us(500);
         }
-        for (float i = 0; i < 240 - (160 * slew); i++)
+        for (; i <= 240 - slew_time; i++)
         {
             aout = 0.9;
-            ThisThread::sleep_for(1ms);
+            wait_us(500);
         }
-        for (float i = 0.9f; i > 0.0f * slew; i -= delta)
+        for (i = 1; i <= slew_time; i++)
         {
-            aout = i;
-            ThisThread::sleep_for(1ms);
+            aout = 0.9 - (i * delta);
+            wait_us(500);
         }
+    }
+}
+
+void wave_sample()
+{
+    while (1)
+    {
+        for (int i = 0; i < sampleAmount; i++)
+        {
+            sample[i] = ain;
+            wait_us(500);
+        }
+        for (int i = 0; i < sampleAmount; i++)
+        {
+           printf("%f\r\n", sample[i]);
+        }
+        ThisThread::sleep_for(5000ms);
     }
 }
 
 int main()
 {
     waveThread.start(callback(&waveQueue, &EventQueue::dispatch_forever));
+    sampleThread.start(callback(&sampleQueue, &EventQueue::dispatch_forever));
     button_up.rise(&ISR1);
     button_down.rise(&ISR2);
     button_select.rise(&ISR3);
