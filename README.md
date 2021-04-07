@@ -28,5 +28,10 @@
   AnalogIn ain(A0);\
   Thread sampleThread;\
   EventQueue sampleQueue;\
+  void wave_sample();
+  
+# Analysis
+  sampling rate = 1000/s.
+  I do not change ant thing else.
   
   
